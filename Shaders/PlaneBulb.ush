@@ -1,0 +1,120 @@
+struct functionsBox
+{
+	
+	// cosine based palette, 4 vec3 params
+	float3 cosineColor(float t, float3 a, float3 b, float3 c, float3 d )
+	{
+    	return a + b*cos( 6.28318*(c*t+d) );
+	}
+	float3 palette (float t) {
+    	return cosineColor( 
+    		t, 
+    		float3(0.5,0.5,0.5),
+    		float3(0.5,0.5,0.5),
+    		float3(0.01,0.01,0.01),
+    		float3(5.00, 0.15,0.20) 
+    	);
+	}
+
+	float2 DE(float3 pos)
+	{
+		float Power = 3.0+4.0*(sin(iTime)+1.0);
+		float3 z = pos;
+		float dr = .5;
+		float r = 0.0;
+
+		for (int i = 0; i < 64 ; i++)
+		{
+			r = length(z);
+			if(r > 1.5)
+			{
+				break;
+			}
+
+			// convert to polar coordinates
+			float theta = acos(z.z/r);
+			float phi = atan2(z.y,z.x);
+			dr =  pow( r, Power-1.0)*Power*dr + 1.0;
+			
+			// scale and rotate the poiniTimre t
+			float zr = pow( r,Power) + cos(iTime);
+        
+			theta = theta*Power;
+			phi = phi*Power + abs(theta * 1.5);
+		
+			// convert back to cartesian coordinates
+			z = zr*float3(sin(theta)*cos(phi), sin(phi)*sin(theta), cos(theta));
+			z+=pos;
+
+		}
+		return float2(0.5*log(r)*r/dr,50.0*pow(dr,0.128/float(12)));
+
+	}
+	
+
+	float2 map(float3 p)
+	{
+    	
+   		float2 d = DE(p);
+   		return d;
+
+	}
+	
+	float2 trace(float3 origin, float3 ray)
+	{
+
+		float t = 0.0f;
+		float c = 0.0f;
+
+		for(int i = 0; i < 12; i++)
+		{
+
+			float3 path = origin + ray * t;
+			float2 dist = map(path);
+			// we want t to be as large as possible at each step but not too big to induce artifacts
+        	t += 0.5 * dist.x;
+        	c += dist.y;
+
+        	if (dist.y < 0.1)
+        	{
+        		break;
+        	}
+		}
+
+		return float2(t,c);
+	}
+};
+
+functionsBox fx;
+
+tu = tu * 2. - 1.0;
+tu.x -= .5;
+tu = abs(tu);
+
+//ray direction (camera is at (0,0,0), view plane is at 0,0,1)
+float3 ray = normalize(float3(tu,1.0));
+
+
+float camDist = 2.55;
+float3 origin = float3(camDist - 2.,0.0,-camDist);  
+
+
+float2 depth = fx.trace(origin,ray);
+
+float fog = 1.0 / (1.0 + depth.x * depth.x * 0.1);
+
+float3 colOut = clamp(fx.palette(depth.y), 0., 1.);
+float a = 1.0;
+
+// discard out pixel
+if(colOut.y > .8)
+{
+	
+	a = 0.0f;	
+}
+
+
+
+return float4(colOut.x, colOut.y, colOut.z, fog / .5);
+
+

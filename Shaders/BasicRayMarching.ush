@@ -1,0 +1,18 @@
+struct someFunctions
+{
+	
+	
+	float3 MakeRed ()
+	{
+	
+		return float3(1.0f, 0.0f, 0.0f);
+	}
+};
+
+
+someFunctions fx;
+
+
+
+float3 outputRes = fx.MakeRed();
+return outputRes;
