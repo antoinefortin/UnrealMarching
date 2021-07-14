@@ -1,0 +1,87 @@
+struct RMstruct
+{
+	
+	// Polynomial smooth min (for copying and pasting into your shaders)
+	/*
+
+	float smin(float a, float b, float k) {
+    	float h = clamp(0.5 + 0.5*(a-b)/k, 0.0, 1.0);
+    	return mix(a, b, h) - k*h*(1.0-h);
+	}
+	*/
+	float smoothMin(float a, float b, float k)
+	{
+		float h = clamp(0.5 + 0.5*(a-b)/k, 0.0, 1.0);
+		return lerp(a,b,h) - k * h*(1.0 - h);
+	}
+
+	float sdBox(float3 p, float3 b )
+	{
+  		float3 q = abs(p) - b;
+  		return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
+	}
+
+
+	float RMSphere(float3 pos, float radius)
+	{
+
+		return length(pos) - radius;
+	}
+
+	float3 RMNormal(float3 pos)
+	{
+		float2 Off = float2(0.01, 0.0);
+		
+		return normalize(float3(
+			getDistance(pos - Off.xyy) - getDistance(pos + Off.xyy), 
+			getDistance(pos - Off.yxy) - getDistance(pos + Off.yxy), 
+			getDistance(pos - Off.yyx) - getDistance(pos + Off.yyx) 
+		));
+	}
+
+	// Distance field
+	float getDistance(float3 pos)
+	{
+		float simpleSphere = RMSphere((pos - ObjectPos), 75.0f);
+		return simpleSphere;
+	}	
+};
+
+
+RMstruct RM;
+float4  Col = 0;
+float3 pos = WorldPos;
+float3 normalWS = 0;
+float theTime = 0;
+float3 posWS = 0;
+
+
+for(int i = 0; i < MaxSteps; i++)
+{
+	
+	
+	if(SceneDepth < length(pos - CameraPosition))
+	{
+		break;
+	}
+
+
+
+	float distance = RM.getDistance(pos);
+
+	// We are on a point
+	if(distance < 0.01)
+	{	
+
+		Col = float4(1.0, 0.0, 0.0, 1.0);
+		normalWS = RM.RMNormal(pos);
+
+		posWS = pos;
+
+
+		break;
+	}
+	pos += CameraVector  * distance;
+}
+
+return float4(normalWS, Col.a);
